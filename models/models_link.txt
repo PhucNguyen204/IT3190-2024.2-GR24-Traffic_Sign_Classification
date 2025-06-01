@@ -1,0 +1,4 @@
+VGG16: https://drive.google.com/file/d/1hGJ-m4FLDyk2ZUQjr3rfabImwK20c8x8/view?usp=sharing
+Random Forest: https://drive.google.com/file/d/1F6efejelUKSmuisdIyARir1bMSoRB04X/view?usp=sharing
+
+Download models from GG Drive to /models
