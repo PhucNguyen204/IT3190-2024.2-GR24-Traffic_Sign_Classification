@@ -69,24 +69,25 @@ def setup_paths():
         'models_dir': models_dir
     }
 
-def visualize_rf_model(paths):
-    model_path = os.path.join(paths['models_dir'], 'random_forest_traffic_sign_model.joblib')
+def visualize_rf_hog_model(paths):
+    model_path = os.path.join(paths['models_dir'], 'rf_hog.joblib')
     try:
         model = joblib.load(model_path)
-        X_test, y_test = load_test_data(
+        X_test, y_test, image_paths = load_test_data(
             paths['test_csv'], 
-            model_type='rf',
+            model_type='rf_hog',
             max_samples=NUM_IMAGES
         )
         accuracy = visualize_predictions(
             X_test, y_test, model, class_names,
-            model_type='rf',
-            num_images=NUM_IMAGES
+            model_type='rf_hog',
+            num_images=NUM_IMAGES,
+            image_paths=image_paths
         )
         
-        return {'name': 'random_forest', 'accuracy': accuracy}
+        return {'name': 'random_forest_hog', 'accuracy': accuracy}
     except Exception as e:
-        print(f"Error processing Random Forest model: {str(e)}")
+        print(f"Error processing Random Forest HOG model: {str(e)}")
         import traceback
         traceback.print_exc()
         return None
@@ -95,7 +96,6 @@ def visualize_vgg16_model(paths):
     model_path = os.path.join(paths['models_dir'], 'VGG16_new.keras')
     try:
         model = tf.keras.models.load_model(model_path)
-        print("\nVGG16 Model Summary:")
         model.summary()
         X_test, y_test, class_indices, original_class_ids = load_test_data(
             paths['test_csv'], 
@@ -119,15 +119,17 @@ def visualize_vgg16_model(paths):
 
 def main():
     parser = argparse.ArgumentParser(description='Visualize Traffic Sign Recognition Models')
-    parser.add_argument('--model', type=str, default='all', choices=['rf', 'vgg16', 'all'],
-                        help='Model to visualize (rf, vgg16, or all)')
+    parser.add_argument('--model', type=str, default='all', 
+                        choices=['rf_hog', 'vgg16', 'all'],
+                        help='Model to visualize (rf_hog, vgg16, or all)')
     args = parser.parse_args()
     paths = setup_paths()
     results = []
-    if args.model in ['rf', 'all']:
-        rf_result = visualize_rf_model(paths)
-        if rf_result:
-            results.append(rf_result)
+    
+    if args.model in ['rf_hog', 'all']:
+        rf_hog_result = visualize_rf_hog_model(paths)
+        if rf_hog_result:
+            results.append(rf_hog_result)
     
     if args.model in ['vgg16', 'all']:
         vgg16_result = visualize_vgg16_model(paths)

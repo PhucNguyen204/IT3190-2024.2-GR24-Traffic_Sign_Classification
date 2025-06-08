@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 from tqdm import tqdm
-from preprocessors import preprocess_rf_svm, preprocess_vgg16
+from preprocessors import preprocess_vgg16, preprocess_rf_hog
 from PIL import Image
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications.vgg16 import preprocess_input
@@ -20,7 +20,8 @@ def load_class_indices(models_dir):
         print(f"Class indices: {class_indices}")
         return class_indices
 
-def load_test_data(test_csv, model_type='rf', max_samples=None):
+
+def load_test_data(test_csv, model_type='rf_hog', max_samples=None):
     test_data = pd.read_csv(test_csv)
     if max_samples:
         test_data = test_data.sample(min(max_samples, len(test_data)), random_state=42)
@@ -36,20 +37,28 @@ def load_test_data(test_csv, model_type='rf', max_samples=None):
         test_df['Path'] = test_df['Path'].apply(lambda x: os.path.join(test_dir, x))
     test_df['Path'] = test_df['Path'].apply(os.path.normpath)
     
-    if model_type == 'rf' or model_type == 'random_forest':
+    if model_type == 'rf_hog':
+        # Tiền xử lý cho Random Forest với HOG features
+        print(f"Processing {len(test_df)} images for Random Forest model (HOG features):")
         X_test = []
-        for path in test_df['Path']:
-            try:
-                img = Image.open(path)
-                img = img.resize((32, 32), Image.LANCZOS)
-                img_array = np.array(img) / 255.0
-                X_test.append(img_array.flatten())
-            except Exception as e:
-                print(f"Error loading {path}: {str(e)}")
+        image_paths = []
+        y_test = []
         
-        X_test = np.array(X_test)
-        y_test = test_df['ClassId'].values
-        return X_test, y_test
+        for _, row in tqdm(test_df.iterrows(), total=len(test_df), desc="Extracting HOG features"):
+            try:
+                img_path = row['Path']
+                features = preprocess_rf_hog(img_path)
+                X_test.append(features)
+                image_paths.append(img_path)
+                y_test.append(row['ClassId'])
+            except Exception as e:
+                print(f"Error processing {img_path}: {str(e)}")
+        
+        X_test = np.array(X_test, dtype=np.float32)
+        y_test = np.array(y_test)
+        image_paths = np.array(image_paths)
+        
+        return X_test, y_test, image_paths
     
     elif model_type == 'vgg16':
         print(f"Using ImageDataGenerator for VGG16 with {len(test_df)} images")
@@ -73,7 +82,7 @@ def load_test_data(test_csv, model_type='rf', max_samples=None):
         X_batch, y_batch = next(generator)
         return X_batch, y_batch, class_indices, original_class_ids  
     else:
-        raise ValueError(f"Error!")
+        raise ValueError(f"Không hỗ trợ model type: {model_type}")
 
 def load_rf_data(test_df):
     X_test = []
